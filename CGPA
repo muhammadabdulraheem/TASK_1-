@@ -1,0 +1,241 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <iomanip>
+#include <limits>   // For numeric_limits to clear input buffer
+#include <cctype>   // For toupper
+
+using namespace std;
+
+// Define a structure to hold course information
+struct Course {
+    string name;
+    double grade; // Grade on a 4.0 scale (e.g., A=4.0, B=3.0, C=2.0)
+    int credits;  // Credit hours for the course
+};
+
+// Function to get valid double input (used for previous total grade points)
+double getValidatedDoubleInput(const string& prompt) {
+    double value;
+    while (true) {
+        cout << prompt;
+        cin >> value;
+        if (cin.fail()) {
+            cout << "Invalid input. Please enter a number.\n";
+            cin.clear(); // Clear the error flag
+            // Ignore remaining characters in the input buffer up to the newline
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+        else {
+            // Check for extra characters after the number (e.g., "3.5a")
+            char nextChar = cin.peek();
+            if (nextChar != EOF && nextChar != '\n' && nextChar != ' ' && nextChar != '\t') {
+                cout << "Invalid input. Please enter only a number.\n";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
+            else {
+                cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Clear rest of line
+                return value;
+            }
+        }
+    }
+}
+
+// Function to get valid integer input
+int getValidatedIntInput(const string& prompt) {
+    int value;
+    while (true) {
+        cout << prompt;
+        cin >> value;
+        if (cin.fail()) {
+            cout << "Invalid input. Please enter an integer.\n";
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+        else {
+            char nextChar = cin.peek();
+            if (nextChar != EOF && nextChar != '\n' && nextChar != ' ' && nextChar != '\t') {
+                cout << "Invalid input. Please enter only an integer.\n";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
+            else {
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                return value;
+            }
+        }
+    }
+}
+
+// Function to get a valid character grade (A, B, C, D, F) and convert it to 4.0 scale
+double getValidatedCharGradeInput(const string& courseName) {
+    char gradeChar;
+    double gradeValue;
+    while (true) {
+        cout << "Enter grade for " << courseName << " (A, B, C, D, F): ";
+        cin >> gradeChar;
+        gradeChar = toupper(gradeChar); // Convert to uppercase for case-insensitivity
+
+        if (cin.fail() || (gradeChar != 'A' && gradeChar != 'B' && gradeChar != 'C' && gradeChar != 'D' && gradeChar != 'F')) {
+            cout << "Invalid input. Please enter A, B, C, D, or F.\n";
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+        else {
+            // Check for extra characters after the single character grade
+            char nextChar = cin.peek();
+            if (nextChar != EOF && nextChar != '\n' && nextChar != ' ' && nextChar != '\t') {
+                cout << "Invalid input. Please enter only a single letter grade (A, B, C, D, F).\n";
+                cin.clear();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            }
+            else {
+                cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Clear rest of line
+
+                // Convert character grade to 4.0 scale
+                switch (gradeChar) {
+                case 'A': gradeValue = 4.0; break;
+                case 'B': gradeValue = 3.0; break;
+                case 'C': gradeValue = 2.0; break;
+                case 'D': gradeValue = 1.0; break;
+                case 'F': gradeValue = 0.0; break;
+                default: gradeValue = -1.0; // Should not happen due to validation
+                }
+                return gradeValue;
+            }
+        }
+    }
+}
+
+
+// Function to calculate Semester GPA
+// Returns a pair: first is total grade points, second is total credits
+std::pair<double, int> calculateSemesterGPA(const vector<Course>& courses, double& semesterGPA) {
+    double totalGradePoints = 0.0;
+    int totalCredits = 0;
+
+    for (const auto& course : courses) {
+        // We assume grade and credits are already validated during input
+        totalGradePoints += (course.grade * course.credits);
+        totalCredits += course.credits;
+    }
+
+    semesterGPA = (totalCredits > 0) ? (totalGradePoints / totalCredits) : 0.0;
+    return { totalGradePoints, totalCredits };
+}
+
+// Function to calculate Overall CGPA
+double calculateOverallCGPA(double currentSemesterGradePoints, int currentSemesterCredits,
+    double previousTotalGradePoints, int previousTotalCredits) {
+    double overallTotalGradePoints = currentSemesterGradePoints + previousTotalGradePoints;
+    int overallTotalCredits = currentSemesterCredits + previousTotalCredits;
+
+    return (overallTotalCredits > 0) ? (overallTotalGradePoints / overallTotalCredits) : 0.0;
+}
+
+int main() {
+    cout << "=======================================\n";
+    cout << "     GPA and CGPA Calculator (C++)    \n";
+    cout << "=======================================\n\n";
+
+    int numCourses;
+    // Input for number of courses
+    numCourses = getValidatedIntInput("Enter the number of courses taken this semester: ");
+
+    vector<Course> semesterCourses;
+    semesterCourses.reserve(numCourses); // Pre-allocate memory for efficiency
+
+    cout << "\nEnter details for each course:\n";
+    for (int i = 0; i < numCourses; ++i) {
+        Course course;
+        cout << "\n--- Course " << (i + 1) << " ---\n";
+
+        cout << "Enter name of course " << (i + 1) << ": ";
+        // Clear the buffer before reading string after numeric input
+        // This is crucial because previous getValidatedIntInput leaves a newline in the buffer
+        if (i == 0) { // Only for the first course, after numCourses input
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        }
+        getline(cin, course.name); // Read the whole line for course name
+
+        // Use the new character grade input function
+        course.grade = getValidatedCharGradeInput(course.name);
+
+        course.credits = getValidatedIntInput("Enter credit hours for " + course.name + ": ");
+        while (course.credits <= 0) {
+            cout << "Credit hours must be positive. Please re-enter.\n";
+            course.credits = getValidatedIntInput("Enter credit hours for " + course.name + ": ");
+        }
+        semesterCourses.push_back(course);
+    }
+
+    // Calculate Semester GPA
+    double semesterGPA = 0.0;
+    pair<double, int> semesterResults = calculateSemesterGPA(semesterCourses, semesterGPA);
+    double currentSemesterGradePoints = semesterResults.first;
+    int currentSemesterCredits = semesterResults.second;
+
+    // Input for previous academic data (for CGPA calculation)
+    cout << "\n=======================================\n";
+    cout << "   Previous Academic Data for CGPA     \n";
+    cout << "=======================================\n";
+
+    double previousTotalGradePoints = getValidatedDoubleInput("Enter your total grade points from all previous semesters: ");
+    while (previousTotalGradePoints < 0) {
+        cout << "Total grade points cannot be negative. Please re-enter.\n";
+        previousTotalGradePoints = getValidatedDoubleInput("Enter your total grade points from all previous semesters: ");
+    }
+
+    int previousTotalCredits = getValidatedIntInput("Enter your total credit hours from all previous semesters: ");
+    while (previousTotalCredits < 0) {
+        cout << "Total credit hours cannot be negative. Please re-enter.\n";
+        previousTotalCredits = getValidatedIntInput("Enter your total credit hours from all previous semesters: ");
+    }
+
+
+    // Calculate Overall CGPA
+    double overallCGPA = calculateOverallCGPA(currentSemesterGradePoints, currentSemesterCredits,
+        previousTotalGradePoints, previousTotalCredits);
+
+    // Display Results
+    cout << "\n\n=======================================\n";
+    cout << "           Academic Report             \n";
+    cout << "=======================================\n";
+
+    cout << fixed << setprecision(2); // Set output precision to 2 decimal places
+
+    cout << "\n--- Individual Course Grades ---\n";
+    if (semesterCourses.empty()) {
+        cout << "No courses entered for this semester.\n";
+    }
+    else {
+        for (const auto& course : semesterCourses) {
+            double gradePoints = course.grade * course.credits;
+            // To display the character grade back, we can do a reverse lookup or store it.
+            // For simplicity, we'll display the numeric 4.0 scale grade here.
+            cout << "  - " << setw(20) << left << course.name
+                << ": Grade (4.0 Scale) = " << setw(4) << right << course.grade
+                << ", Credits = " << setw(2) << course.credits
+                << ", Grade Points = " << setw(6) << gradePoints << "\n";
+        }
+    }
+
+    cout << "\n--- Semester Summary ---\n";
+    cout << "Total Semester Credits: " << currentSemesterCredits << "\n";
+    cout << "Total Semester Grade Points: " << currentSemesterGradePoints << "\n";
+    cout << "Semester GPA: " << semesterGPA << "\n";
+
+    cout << "\n--- Overall Academic Summary ---\n";
+    cout << "Previous Total Grade Points: " << previousTotalGradePoints << "\n";
+    cout << "Previous Total Credits: " << previousTotalCredits << "\n";
+    cout << "Current Semester Grade Points (for CGPA): " << currentSemesterGradePoints << "\n";
+    cout << "Current Semester Credits (for CGPA): " << currentSemesterCredits << "\n";
+    cout << "Overall CGPA: " << overallCGPA << "\n";
+
+    cout << "\n=======================================\n";
+    cout << "         Calculation Complete          \n";
+    cout << "=======================================\n";
+
+    return 0; // Indicate successful execution
+}
